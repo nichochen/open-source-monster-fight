@@ -36,6 +36,15 @@
             return Math.floor(Math.random() * (max - min)) + min;
         }
 
+        function guid() {
+            function s4() {
+                return Math.floor((1 + Math.random()) * 0x10000)
+                    .toString(16)
+                    .substring(1);
+            }
+            return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+        }
+
         function centerx(sprite) {
             return sprite.x + sprite.width / 2
         }
@@ -54,11 +63,14 @@
             //m.on('loaded',setup);
             //function setup() {
             monsters.push(m);
-            m.x = Math.random() > 0.5 ? - randint(200, 600) : app.renderer.view.width + randint(0, 600);
+            let x = (Math.random() < ((ship.x + 300 / 2) / (app.renderer.view.width - 300 / 2)) ? -randint(200, 600) : app.renderer.view.width + randint(0, 600));
+            m.x = x;
             m.y = monsters_baseline - m.height;
             m.vx = randint(0, 10) > 5 ? -1 : 1;
             m.interactive = true;
             m.txt = { count: 0, staged: false };
+            m.txt.guid = guid();
+            console.log(m.txt.uid);
             m.on('pointerdown', function (e) {
                 ship_target_x = e.data.global.x;
                 ship_speed = 5;
@@ -69,7 +81,6 @@
             app.stage.addChild(m);
 
             // }
-
 
         }
 
@@ -95,7 +106,6 @@
 
                     app.stage.removeChild(monsters[j]);
                     monsters.splice(j, 1);
-                    console.log('Monster Removed');
                 }
             }
             remove_list = []
@@ -175,7 +185,6 @@
                     app.stage.addChild(b);
                     bullets.push(b);
                     fired = true;
-                    console.log('bullet')
                 }
             }
             ship.y = 100 + Math.sin((new Date()).getMilliseconds() / 150) * 10 + 100;
@@ -193,16 +202,31 @@
         }
 
         function remove_sprite(idx, collectoins) {
-            app.stage.removeChild(collectoins[idx]);
+            let i = collectoins[idx];
             collectoins.splice(idx, 1);
+            app.stage.removeChild(i);
         }
 
         function cleanup_sprites(collections) {
-            for (var i = 0; i < collections.length; i++) {
+            for (var i = collections.length-1; i >= 0; i--) {
                 remove_sprite(i, collections);
             }
 
             collections = [];
+        }
+
+        function remove_monster(guid_list){
+            for(var i = 0; i<guid_list.length; i++){
+                for(var j=0; j<monsters.length; j++){
+                    if(monsters[j].txt.guid == guid_list[i]){
+                        console.log('monster ' + monsters[j].txt.guid + 'remove');
+                        let m = monsters[j];
+                        monsters.splice(j,1); 
+                        app.stage.removeChild(m);                       
+                        break;
+                    }
+                }
+            }
         }
 
         function bullet_movement() {
@@ -218,9 +242,7 @@
 
                 for (var k = 0; k < monsters.length; k++) {
                     if (boxesIntersect(b, monsters[k])) {
-
                         let image_name = './images/bang' + (Math.random() > 0.5 ? 1 : 2) + '.png';
-                        console.log(image_name)
                         let ba = PIXI.Sprite.fromImage(image_name);
                         ba.x = monsters[k].x;
                         ba.y = monsters[k].y;
@@ -228,32 +250,28 @@
                         bangs.push(ba);
                         app.stage.addChild(ba);
 
-                        monsters_to_be_removed.push(k);
+                        monsters_to_be_removed.push(monsters[k].txt.guid);
                         bullet_to_be_removed.push(i);
+                        score += 10;
                     }
                 }
 
-                for (var l = 0; l < monsters_to_be_removed.length; l++) {
-                    remove_sprite(l, monsters);
-                    score += 10;
-                }
+               remove_monster(monsters_to_be_removed);
             }
 
-            for (var j = 0; j < bullet_to_be_removed.length; j++) {
+            for (var j = bullet_to_be_removed.length-1 ; j >= 0; j--) {
                 remove_sprite(j, bullets);
-                console.log('Bullet removed');
             }
 
         }
 
         function bangs_cleanup() {
-            for (var i = 0; i < bangs.length; i++) {
+            for (var i = bangs.length - 1; i >= 0; i--) {
                 if (bangs[i].txt.count++ > 5) {
                     remove_sprite(i, bangs);
                 }
             }
         }
-
 
         function game_restart() {
 
@@ -295,15 +313,12 @@
         }
 
 
-
-
         var app = new PIXI.Application({ width: 900, height: 1600, resolution: 1.0 });
         app.renderer.backgroundColor = 0x808080;
         app.renderer.i
         app.renderer.view.style.position = "absolute";
         app.renderer.view.style.display = "block";
         app.renderer.autoResize = true;
-
         app.renderer.resize(window.innerWidth, window.innerHeight);
         document.body.appendChild(app.view);
 
@@ -335,6 +350,7 @@
         var time = new Date();
         var time_limit = 20;
 
+        //background
         var txt = PIXI.Texture.fromImage('./images/bg-space.jpg');
         var bg = new PIXI.Sprite(txt);
         bg.interactive = true;
@@ -350,14 +366,13 @@
         bg.height = app.renderer.view.width * 1600 / 900;
         app.stage.addChild(bg);
 
-
-
-
+        //logo
         var logo = PIXI.Sprite.fromImage('./images/logo.png');
         logo.x = app.renderer.view.width / 2 - 450;
         logo.y = app.renderer.view.height / 2 - 200;
         app.stage.addChild(logo);
 
+        //play button
         var play = PIXI.Sprite.fromImage('./images/play.png');
         play.x = app.renderer.view.width / 2 - 150;
         play.y = logo.y + 350;
@@ -379,7 +394,7 @@
             time_left = time_limit;
         });
 
-
+        //Space ship
         PIXI.loader.add({ url: "./images/ship-x.png", crossOrigin: true }).load(setup);
 
         function setup() {
@@ -395,9 +410,7 @@
             app.ticker.add(delta => gameLoop(delta));
         }
 
-
-
-
+        //Text
         var info_style = new PIXI.TextStyle({
             fontFamily: "My Font",
             fontSize: 70,
@@ -434,9 +447,9 @@
 
         function gameLoop(delta) {
 
+            //before game start
             if (!game_started) {
                 loop_indicator++;
-                console.log(Math.sin(loop_indicator * 2) / 2 + 1 / 2);
                 if (loop_indicator % 1 == 0) {
                     play.scale.x = Math.sin(loop_indicator / 8) / 16 + 0.85;
                     play.scale.y = Math.sin(loop_indicator / 8) / 16 + 0.85;
@@ -451,7 +464,10 @@
                 return;
             }
 
+            //Show the ship after game start
             ship.visible = true;
+
+            //If game stopped
             if (game_stopped) {
 
                 if (!game_stopped_setup) {
