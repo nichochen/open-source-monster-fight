@@ -1,0 +1,551 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Open Source Monster Fight - Fight Monster With Open Source Technology</title>
+</head>
+<script src="js/pixi.min.js"></script>
+<style>
+    * {
+        padding: 0;
+        margin: 0
+    }
+
+    @font-face {
+        font-family: "My Font";
+        src: url("./fonts/8-Bit Madness.woff") format("woff");
+    }
+</style>
+
+<script src="js/webfont.js"></script>
+<script>
+    WebFont.load({
+        custom: {
+            families: ['My Font']
+        }
+    });
+</script>
+
+<body>
+
+
+    <script type="text/javascript">
+
+        function randint(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+        function centerx(sprite) {
+            return sprite.x + sprite.width / 2
+        }
+
+        function gen_non_overlay_x() {
+            let screen_width = app.renderer.view.width;
+            let x = randint(screen_width / 3 * (monsters.length - 1), screen_width / 3 * monsters.length - 200);
+            return x;
+        }
+
+        function gen_monsters() {
+            let image_name = './images/monster' + randint(1, 6) + '.png';
+
+            let m = PIXI.Sprite.fromImage(image_name);
+            //m.texture.baseTexture.on('loaded', setup);
+            //m.on('loaded',setup);
+            //function setup() {
+            monsters.push(m);
+            m.x = Math.random() > 0.5 ? - randint(200, 600) : app.renderer.view.width + randint(0, 600);
+            m.y = monsters_baseline - m.height;
+            m.vx = randint(0, 10) > 5 ? -1 : 1;
+            m.interactive = true;
+            m.txt = { count: 0, staged: false };
+            m.on('pointerdown', function (e) {
+                ship_target_x = e.data.global.x;
+                ship_speed = 5;
+                fired = false;
+            });
+
+
+            app.stage.addChild(m);
+
+            // }
+
+
+        }
+
+        function monsters_cleanup() {
+            for (var i = 0; i < monsters.length; i++) {
+                let monster = monsters[i];
+                if (monster.txt.to_be_delete) {
+
+                    remove_list.push(i)
+
+
+                    if (!monster.txt.supplied) {
+                        gen_monsters();
+                        monster.txt.supplied = true;
+                    }
+
+                }
+            }
+
+            for (var j = 0; j < remove_list.length; j++) {
+                let monster = monsters[j];
+                if (monster.x > (app.renderer.view.width + 400) || monster.x < (-400)) {
+
+                    app.stage.removeChild(monsters[j]);
+                    monsters.splice(j, 1);
+                    console.log('Monster Removed');
+                }
+            }
+            remove_list = []
+        }
+
+        function monsters_movement() {
+            for (var i = 0; i < monsters.length; i++) {
+                let monster = monsters[i];
+
+                if (!monster.txt.to_be_delete) {
+
+                    if (monster.x <= 100) {
+                        monster.vx = 1;
+                    } else if (monster.x >= 860) {
+                        monster.vx = -1;
+                    }
+
+                    if (Math.random() > 0.99) {
+                        monster.vx = monster.vx * -1;
+                    }
+                }
+
+                if (monster.y <= monsters_baseline - monster.height) {
+                    monster.vy = 1;
+                } else if (monster.y >= (monsters_baseline - monster.height + 30)) {
+                    monster.vy = -1;
+                }
+
+
+
+                monster.y += randint(2, 4) * monster.vy;
+                monster.x += randint(2, 4) * 3 * monster.vx;
+
+                monster.txt.count++;
+
+                if (monster.txt.count > 200) {
+                    monster.txt.to_be_delete = true;
+                }
+
+            }
+        }
+
+        function ship_movement() {
+            w = app.renderer.view.width;
+
+            if (ship.x >= (w - 500)) {
+                ship.txt.direct = -1;
+            } else if (ship.x <= 100) {
+                ship.txt.direct = 1;
+            }
+
+            if (ship_target_x != -1) {
+
+                ship_center_x = ship.x + ship.width / 2;
+
+                if (ship_target_x > ship_center_x) {
+                    ship.x += ship_speed;
+                } else {
+                    ship.x -= ship_speed;
+                }
+
+                if (Math.abs(ship_target_x - ship_center_x) < 10) {
+                    ship_speed = 1;
+                } else {
+                    ship_speed = 10;
+                }
+
+                //create bullets
+                if (Math.abs(ship_target_x - ship_center_x) <= 1 && !fired && bullets.length < max_bullet) {
+                    ship_speed = 5;
+
+                    let image_name = './images/bullet' + randint(1, 6) + '.png';
+                    let b = PIXI.Sprite.fromImage(image_name);
+                    b.x = ship_target_x;
+                    b.y = ship.y + ship.height - 50;
+                    b.vy = 0;
+                    app.stage.addChild(b);
+                    bullets.push(b);
+                    fired = true;
+                    console.log('bullet')
+                }
+            }
+            ship.y = 100 + Math.sin((new Date()).getMilliseconds() / 150) * 10 + 100;
+        }
+
+        function boxesIntersect(a, b) {
+            let a_centerx = a.x + a.width / 2;
+            let a_centery = a.y + a.height / 2;
+            let b_centerx = b.x + b.width / 2;
+            let b_centery = b.y + b.height / 2;
+            //return a.x + a.width > b.x && a.x < b.x + b.width && a.y + a.height > b.y && a.y < b.y + b.height;
+            let xd = Math.abs(a_centerx - b_centerx);
+            let yd = Math.abs(a_centery - b_centery);
+            return xd <= b.width / 2 && yd <= b.height / 2;
+        }
+
+        function remove_sprite(idx, collectoins) {
+            app.stage.removeChild(collectoins[idx]);
+            collectoins.splice(idx, 1);
+        }
+
+        function cleanup_sprites(collections) {
+            for (var i = 0; i < collections.length; i++) {
+                remove_sprite(i, collections);
+            }
+
+            collections = [];
+        }
+
+        function bullet_movement() {
+            let bullet_to_be_removed = [];
+            let monsters_to_be_removed = [];
+            for (var i = 0; i < bullets.length; i++) {
+                let b = bullets[i];
+                b.y += 1 * b.vy++;
+
+                if (b.y > app.renderer.view.height + 200) {
+                    bullet_to_be_removed.push(i)
+                }
+
+                for (var k = 0; k < monsters.length; k++) {
+                    if (boxesIntersect(b, monsters[k])) {
+
+                        let image_name = './images/bang' + (Math.random() > 0.5 ? 1 : 2) + '.png';
+                        console.log(image_name)
+                        let ba = PIXI.Sprite.fromImage(image_name);
+                        ba.x = monsters[k].x;
+                        ba.y = monsters[k].y;
+                        ba.txt = { count: 0 };
+                        bangs.push(ba);
+                        app.stage.addChild(ba);
+
+                        monsters_to_be_removed.push(k);
+                        bullet_to_be_removed.push(i);
+                    }
+                }
+
+                for (var l = 0; l < monsters_to_be_removed.length; l++) {
+                    remove_sprite(l, monsters);
+                    score += 10;
+                }
+            }
+
+            for (var j = 0; j < bullet_to_be_removed.length; j++) {
+                remove_sprite(j, bullets);
+                console.log('Bullet removed');
+            }
+
+        }
+
+        function bangs_cleanup() {
+            for (var i = 0; i < bangs.length; i++) {
+                if (bangs[i].txt.count++ > 5) {
+                    remove_sprite(i, bangs);
+                }
+            }
+        }
+
+
+        function game_restart() {
+
+            cleanup_sprites(monsters);
+            cleanup_sprites(bullets);
+            cleanup_sprites(bangs);
+
+            app.stage.removeChild(cover);
+            app.stage.removeChild(restart);
+            app.stage.removeChild(endding_board1);
+            app.stage.removeChild(endding_board2);
+            app.stage.removeChild(endding_board3);
+            app.stage.removeChild(score_text);
+
+            fired = false;
+
+            time_left = time_limit;
+            game_started = false;
+            game_stopped = false;
+            game_stopped_setup = false;
+            ship.x = app.renderer.view.width / 2 - ship.width / 2;
+            score = 0;
+
+            info_style.fill = "#f4f6f9";
+            info_style.stroke = "#1c178c";
+            info_style.dropShadowColor = "#5ee4ff";
+
+            logo.visible = true;
+            play.visible = true;
+            ship.visible = false;
+
+        }
+
+        //run
+
+        let type = "WebGL"
+        if (!PIXI.utils.isWebGLSupported()) {
+            type = "canvas"
+        }
+
+
+
+
+        var app = new PIXI.Application({ width: 900, height: 1600, resolution: 1.0 });
+        app.renderer.backgroundColor = 0x808080;
+        app.renderer.i
+        app.renderer.view.style.position = "absolute";
+        app.renderer.view.style.display = "block";
+        app.renderer.autoResize = true;
+
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(app.view);
+
+        //Game Settings
+
+        var monsters = [];
+        var bullets = [];
+        var bangs = [];
+        var fired = false;
+        var time_left = time_limit;
+        var game_started = false;
+        var game_stopped = false;
+        var game_stopped_setup = false;
+        var restart;
+        var cover;
+        var endding_board1;
+        var endding_board2;
+        var endding_board3;
+
+        var max_monsters = 3;
+        var monsters_baseline = app.renderer.view.height - 100;
+        var ship_target_x = -1;
+        var ship_speed = 10;
+        var remove_list = [];
+        var max_bullet = 3;
+        var loop_indicator = -1;
+
+        var score = 0;
+        var time = new Date();
+        var time_limit = 20;
+
+        var txt = PIXI.Texture.fromImage('./images/bg-space.jpg');
+        var bg = new PIXI.Sprite(txt);
+        bg.interactive = true;
+        bg.on('pointerdown', function (e) {
+            ship_target_x = parseInt(e.data.global.x);
+            ship_speed = 5;
+            fired = false;
+
+        });
+
+        bg.resolution = 2;
+        bg.width = app.renderer.view.width;
+        bg.height = app.renderer.view.width * 1600 / 900;
+        app.stage.addChild(bg);
+
+
+
+
+        var logo = PIXI.Sprite.fromImage('./images/logo.png');
+        logo.x = app.renderer.view.width / 2 - 450;
+        logo.y = app.renderer.view.height / 2 - 200;
+        app.stage.addChild(logo);
+
+        var play = PIXI.Sprite.fromImage('./images/play.png');
+        play.x = app.renderer.view.width / 2 - 150;
+        play.y = logo.y + 350;
+        app.stage.addChild(play);
+        play.interactive = true;
+        play.button = true;
+        play.on('pointerdown', function (e) {
+            play.y += 3;
+
+        });
+
+        play.on('pointerup', function (e) {
+            play.y -= 3;
+
+            game_started = true;
+            logo.visible = false;
+            play.visible = false;
+            time = new Date();
+            time_left = time_limit;
+        });
+
+
+        PIXI.loader.add({ url: "./images/ship-x.png", crossOrigin: true }).load(setup);
+
+        function setup() {
+            ship = new PIXI.Sprite(PIXI.loader.resources["./images/ship-x.png"].texture);
+            ship.x = app.renderer.view.width / 2 - ship.width / 2;
+            ship.y = 200;
+            ship.width = 300;
+            ship.height = 300;
+            ship.txt = { direct: 1 };
+            ship.visible = false;
+            app.stage.addChild(ship);
+
+            app.ticker.add(delta => gameLoop(delta));
+        }
+
+
+
+
+        var info_style = new PIXI.TextStyle({
+            fontFamily: "My Font",
+            fontSize: 70,
+            // fontWeight: "bold",
+            fill: "#f4f6f9",
+            stroke: '#1c178c',
+            strokeThickness: 1,
+            dropShadow: true,
+            dropShadowColor: "#5ee4ff",
+            dropShadowBlur: 4,
+            dropShadowAngle: Math.PI / 6,
+            dropShadowDistance: 6
+        });
+
+        var score_style = new PIXI.TextStyle({
+            fontFamily: "My Font",
+            fontSize: 200,
+            fill: "white",
+            stroke: '#1c178c',
+            strokeThickness: 1,
+            dropShadow: true,
+            dropShadowColor: "#5ee4ff",
+            dropShadowBlur: 4,
+            dropShadowAngle: Math.PI / 6,
+            dropShadowDistance: 6
+        });
+
+        var score_board = new PIXI.Text('', info_style);
+        var time_board = new PIXI.Text('', info_style);
+        app.stage.addChild(score_board);
+        app.stage.addChild(time_board);
+        score_board.position.set(600, 50);
+        time_board.position.set(100, 50);
+
+        function gameLoop(delta) {
+
+            if (!game_started) {
+                loop_indicator++;
+                console.log(Math.sin(loop_indicator * 2) / 2 + 1 / 2);
+                if (loop_indicator % 1 == 0) {
+                    play.scale.x = Math.sin(loop_indicator / 8) / 16 + 0.85;
+                    play.scale.y = Math.sin(loop_indicator / 8) / 16 + 0.85;
+                    play.x = app.renderer.view.width / 2 - play.width / 2;
+                    play.y = app.renderer.view.height / 2 - play.height / 2 + 180;
+                    //logo.x = (Math.sin(loop_indicator / 4) / 48 + 0.85) * app.renderer.view.width/2 - 360;
+                    //logo.y = (Math.cos(loop_indicator / 4) / 48 + 0.85) * app.renderer.view.height/2 - 50;
+                }
+
+                //play.x += Math.cos((new Date()).getMilliseconds()) * 5;
+                //play.y += Math.sin((new Date()).getMilliseconds()) * 5;
+                return;
+            }
+
+            ship.visible = true;
+            if (game_stopped) {
+
+                if (!game_stopped_setup) {
+                    cover = new PIXI.Graphics();
+                    cover.beginFill(0x000000, 0.99);
+                    cover.drawRect(0, 0, app.renderer.view.width, app.renderer.view.height);
+                    cover.endFill(0x000000, 0.99);
+                    cover.alpha = 0.7;
+                    app.stage.addChild(cover);
+                    game_stopped_setup = true;
+
+                    info_style.fill = 'yellow';
+                    info_style.dropShadowColor = 'red';
+                    info_style.fontSize = 70;
+
+                    endding_board1 = new PIXI.Text('Well done!', info_style);
+                    endding_board2 = new PIXI.Text('You have saved the universe!', info_style);
+                    endding_board3 = new PIXI.Text('Your score is', info_style);
+
+                    if (score < 50) {
+                        endding_board1 = new PIXI.Text('Need more practice!', info_style);
+                        endding_board2 = new PIXI.Text('Keep up the good work!', info_style);
+                    }
+
+                    var ending_logo = PIXI.Sprite.fromImage('./images/logo.png');
+                    ending_logo.x = app.renderer.view.width / 2 - 450;
+                    ending_logo.y = 200;
+                    app.stage.addChild(ending_logo);
+                    score_text = new PIXI.Text(score, score_style);
+                    app.stage.addChild(endding_board1);
+                    app.stage.addChild(endding_board2);
+                    app.stage.addChild(endding_board3);
+                    app.stage.addChild(score_text);
+                    endding_board1.position.set(app.renderer.view.width / 2 - endding_board1.width / 2, 600);
+                    endding_board2.position.set(app.renderer.view.width / 2 - endding_board2.width / 2, endding_board1.y + + endding_board3.height + 10);
+                    endding_board3.position.set(app.renderer.view.width / 2 - endding_board3.width / 2, endding_board2.y + + endding_board3.height + 10);
+                    score_text.position.set(app.renderer.view.width / 2 - score_text.width / 2, endding_board3.y + endding_board3.height + 10);
+
+                    let image_name = './images/monster' + randint(1, 6) + '.png';
+
+                    restart = PIXI.Sprite.fromImage('images/restart.png');
+                    app.stage.addChild(restart);
+                    restart.x = app.renderer.view.width / 2 - 280;
+                    restart.y = score_text.y + score_text.height + 50;
+                    restart.interactive = true;
+                    restart.button = true;
+                    restart.on('pointerdown', function (e) {
+
+                        restart.x -= 2;
+                        restart.y += 2;
+
+                    });
+
+                    restart.on('pointerup', function (e) {
+
+                        restart.x += 2;
+                        restart.y -= 2;
+                        app.stage.removeChild(ending_logo)
+                        game_restart();
+                    });
+
+                }
+                return;
+            }
+
+            time_left = parseFloat(time_limit - (new Date() - time) / 1000).toFixed(2);
+
+            if (time_left <= 0) {
+                game_stopped = true;
+                time_left = 0.00;
+            }
+
+            if (monsters.length < max_monsters) {
+                gen_monsters();
+            }
+
+            ship_movement();
+            monsters_movement();
+            bullet_movement();
+            monsters_cleanup();
+            bangs_cleanup();
+
+            loop_indicator++;
+            info_style.fill = loop_indicator > 5 == 0 ? '#ff597f' : '#fff963';
+            loop_indicator = loop_indicator > 10 ? 0 : loop_indicator;
+
+            score_board.text = "SCORE: " + score;
+            time_board.text = "TIME: " + Math.abs(time_left);
+
+        }
+
+
+
+    </script>
+</body>
+
+</html>
