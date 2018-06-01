@@ -30,7 +30,7 @@
 <body>
     <script type="text/javascript">
         function randint(min, max) {
-            let r = Math.round(Math.random()  * (max - min)) + min
+            let r = Math.round(Math.random() * (max - min)) + min
             return r
         }
 
@@ -61,11 +61,29 @@
                 bg.interactive = false
 
                 let objects = this.objects
+                let app = this.app
+                let settings = this.settings
 
                 bg.on('pointerdown', function (e) {
-                    objects.ship.target_x = parseInt(e.data.global.x);
-                    objects.ship.vx = 5;
-                    objects.ship.fired = false;
+
+                    let ship = objects.ship
+
+                    ship.target_x = parseInt(e.data.global.x)
+                    ship.target_y = parseInt(e.data.global.y)
+                    console.log(parseInt(ship.target_y))
+                    if (ship.target_y >= 600) {
+                        ship.target_y = 600
+                    }
+
+                    if (ship.target_y <= 150) {
+                        ship.target_y = 150
+                    }
+
+                    console.log(ship.target_y)
+
+                    ship.vx = 5
+                    ship.vy = 5
+                    ship.fired = false;
                 });
 
                 bg.resolution = 2
@@ -126,7 +144,9 @@
                 ship.txt = {}
                 ship.direction = 1
                 ship.target_x = ship.x
+                ship.target_y = ship.y
                 ship.vx = 10
+                ship.vy = 20
                 ship.visible = false;
                 ship.fired = true;
                 this.app.stage.addChild(ship);
@@ -149,10 +169,20 @@
                     }
 
                     if (Math.abs(target_x - center_x) < 10) {
-                        ship.vx = 1;
-                    } else {
-                        ship.vx = 10;
+                        ship.x = ship.target_x - ship.width / 2
                     }
+
+                    if (Math.abs(ship.target_y - ship.y) < 10) {
+                        ship.y = ship.target_y
+                    }
+
+                    if (ship.target_y < ship.y) {
+                        ship.y -= ship.vy
+                    } else if (ship.target_y > ship.y) {
+                        ship.y += ship.vy
+                    }
+
+
 
                     //create bullets
                     if (Math.abs(target_x - center_x) <= 1 && !ship.fired && this.objects.bullets.length < this.settings.max_bullet) {
@@ -167,7 +197,10 @@
                         ship.fired = true
                     }
                 }
-                ship.y = 100 + Math.sin((new Date()).getMilliseconds() / 150) * 10 + 100;
+
+                if (ship.target_y == ship.y) {
+                    ship.y = ship.y + Math.sin((new Date()).getMilliseconds() / 150) * 10;
+                }
             }
 
             this.generate_monster = function () {
@@ -189,9 +222,27 @@
 
                 m.interactive = true;
                 let ship = this.objects.ship
+                let objects = this.objects
+                let app = this.app
+                let settings = this.settings
                 m.on('pointerdown', function (e) {
-                    ship.target_x = e.data.global.x
+                    let ship = objects.ship
+
+                    ship.target_x = parseInt(e.data.global.x)
+                    ship.target_y = parseInt(e.data.global.y)
+                    console.log(parseInt(ship.target_y))
+                    if (ship.target_y >= 600) {
+                        ship.target_y = 600
+                    }
+
+                    if (ship.target_y <= 150) {
+                        ship.target_y = 150
+                    }
+
+                    console.log(ship.target_y)
+
                     ship.vx = 5
+                    ship.vy = 5
                     ship.fired = false;
                 });
 
@@ -227,7 +278,7 @@
                             }
                         }
 
-                        if(monster.x > -150 || monster.x < this.app.renderer.view.width - 50){
+                        if (monster.x > -150 || monster.x < this.app.renderer.view.width - 50) {
                             monster.staged = true
                         }
 
