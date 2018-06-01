@@ -178,7 +178,7 @@
                 let m = PIXI.Sprite.fromImage(image_name)
 
 
-                let x = (Math.random() < ((this.objects.ship.x + 300 / 2) / (this.app.renderer.view.width - 300 / 2)) ? -randint(200, 600) : this.app.renderer.view.width + randint(0, 600))
+                let x = (Math.random() < ((this.objects.ship.x + 300 / 2) / (this.app.renderer.view.width - 300 / 2)) ? -randint(200, 250) : this.app.renderer.view.width + randint(0, 250))
                 m.x = x
                 m.y = this.settings.monsters_baseline - 200
                 m.vx = randint(0, 10) > 5 ? -1 : 1
@@ -262,6 +262,16 @@
                 }
 
                 collections = [];
+            }
+
+            this.remove_all_monsters = function(){
+                let monsters = Object.keys(this.objects.monsters)
+                
+                for(var i = 0; i < monsters.length; i++){
+                    this.app.stage.removeChild(this.objects.monsters[monsters[i]])
+                    delete this.objects.monsters[monsters[i]]
+                }
+
             }
 
             this.clean_up_monsters = function () {
@@ -355,6 +365,7 @@
             }
 
             this.game_loop = function (delta) {
+                this.status.loop_indicator = this.status.loop_indicator > 10 ? 0 : ++this.status.loop_indicator
 
                 if (!this.status.started) {
                     this.status.loop_indicator++;
@@ -372,6 +383,7 @@
                         this.status.ready_to_stop = true
                         this.stop_setup()
                     }
+      
                     return
                 }
 
@@ -389,15 +401,17 @@
                 this.status.time_left = parseFloat(this.settings.time_limit - (new Date() - this.status.start_time) / 1000).toFixed(2);
 
                 if (this.status.time_left <= 0) {
-                    this.status.stopped = true;
-                    this.status.time_left = 0.00;
+                    this.status.stopped = true
+                    this.status.time_left = 0.00
                 }
-                this.objects.score_board.text = "SCORE: " + this.status.score;
-                this.objects.time_board.text = "TIME: " + Math.abs(this.status.time_left);
+                this.objects.score_board.text = "SCORE: " + this.status.score
+                this.objects.time_board.text = "TIME: " + Math.abs(this.status.time_left)
+
+                this.settings.info_style.fill = this.status.loop_indicator > 5 == 0 ? '#ff597f' : '#fff963'
             }
 
             this.restart_game = function () {
-                this.cleanup_sprites(this.objects.monsters);
+                this.remove_all_monsters();
                 this.cleanup_sprites(this.objects.bullets);
                 this.cleanup_sprites(this.objects.bangs);
 
