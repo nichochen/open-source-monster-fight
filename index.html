@@ -66,7 +66,6 @@
                 bg.on('pointerdown', function (e) {
                     objects.ship.target_x = parseInt(e.data.global.x);
                     objects.ship.vx = 5;
-                    console.log(e.data.global.x)
                     objects.ship.fired = false;
                 });
 
@@ -197,47 +196,58 @@
                     ship.fired = false;
                 });
 
-                this.app.stage.addChild(m);
-                this.objects.monsters[m.guid] = m
+                this.app.stage.addChild(m)
+                this.objects.monsters.push(m)
 
             }
 
 
             this.monsters_routine = function () {
-                let monsters = Object.values(this.objects.monsters)
+                let monsters = this.objects.monsters
 
-                for (var i = 0; i < monsters.length; i++) {
-                    //console.log('monster: ' + i)
-                    let monster = monsters[i];
-                    //console.log('monster: ' + i + ' x: ' + monster.x + ' count: ' + monster.count + 'to_be: ' + monster.to_be_deleted)
+                for (var i = monsters.length - 1; i >= 0; i--) {
+                    let monster = monsters[i]
+
                     if (!monster.to_be_deleted) {
-
                         if (monster.x <= 100) {
-                            monster.vx = 1;
+                            monster.vx = 1
                         } else if (monster.x >= 860) {
-                            monster.vx = -1;
+                            monster.vx = -1
                         }
 
                         if (Math.random() > 0.99) {
-                            monster.vx = monster.vx * -1;
+                            monster.vx = monster.vx * -1
                         }
+
                     }
 
                     if (monster.y <= this.settings.monsters_baseline - monster.height) {
-                        monster.vy = 1;
+                        monster.vy = 1
                     } else if (monster.y >= (this.settings.monsters_baseline - monster.height + 30)) {
-                        monster.vy = -1;
+                        monster.vy = -1
                     }
 
-                    monster.y += randint(2, 4) * monster.vy;
-                    monster.x += randint(2, 4) * 3 * monster.vx;
+
+
+                    monster.y += randint(2, 4) * monster.vy
+                    monster.x += randint(2, 4) * 3 * monster.vx
 
                     monster.count++;
 
                     if (monster.count > 200) {
-                        monster.to_be_deleted = true;
-                    }
+                        monster.to_be_deleted = true
 
+                        if (!monster.supplied) {
+                            this.generate_monster()
+                            monster.supplied = true
+                        }
+
+                        if (monster.x > (this.app.renderer.view.width + 100) || monster.x < (-200)) {
+
+                            this.app.stage.removeChild(monster)
+                            monsters.splice(i, 1)
+                        }
+                    }
                 }
             }
 
@@ -264,47 +274,6 @@
                 collections = [];
             }
 
-            this.remove_all_monsters = function(){
-                let monsters = Object.keys(this.objects.monsters)
-                
-                for(var i = 0; i < monsters.length; i++){
-                    this.app.stage.removeChild(this.objects.monsters[monsters[i]])
-                    delete this.objects.monsters[monsters[i]]
-                }
-
-            }
-
-            this.clean_up_monsters = function () {
-                let remove_list = []
-                let monsters = Object.values(this.objects.monsters)
-
-                for (var i = 0; i < monsters.length; i++) {
-                    let monster = monsters[i]
-                    if (monster.to_be_deleted) {
-                        remove_list.push(monster.guid)
-
-                        if (!monster.supplied) {
-                            this.generate_monster()
-                            monster.supplied = true
-                        }
-                    }
-                }
-
-                for (var j = remove_list.length - 1; j >= 0; j--) {
-                    let monster = monsters[j]
-                    if (monster.x > (this.app.renderer.view.width + 400) || monster.x < (-400)) {
-
-                        let d_monster = this.objects.monsters[remove_list[j]]
-                        this.app.stage.removeChild(d_monster);
-                        delete this.objects.monsters[remove_list[j]]
-
-                    }
-                }
-
-                remove_list = []
-
-            }
-
             this.box_intersect = function (a, b) {
                 let a_centerx = a.x + a.width / 2;
                 let a_centery = a.y + a.height / 2;
@@ -319,18 +288,17 @@
 
 
             this.bullet_routine = function () {
-                let bullet_to_be_removed = [];
-                let monsters_to_be_removed = [];
                 for (var i = 0; i < this.objects.bullets.length; i++) {
                     let b = this.objects.bullets[i];
                     b.y += 1 * b.vy++;
 
                     if (b.y > this.app.renderer.view.height + 200) {
-                        bullet_to_be_removed.push(i)
+                        this.remove_sprite(i, this.objects.bullets)
+                        break
                     }
 
-                    let monsters = Object.values(this.objects.monsters)
-                    for (var k = 0; k < monsters.length; k++) {
+                    let monsters = this.objects.monsters
+                    for (var k = monsters.length - 1; k >= 0; k--) {
                         if (this.box_intersect(b, monsters[k])) {
                             let image_name = './images/bang' + (Math.random() > 0.5 ? 1 : 2) + '.png';
                             let ba = PIXI.Sprite.fromImage(image_name);
@@ -340,20 +308,13 @@
                             this.objects.bangs.push(ba);
                             this.app.stage.addChild(ba);
 
-                            let d_monster = this.objects.monsters[monsters[k].guid]
-                            this.app.stage.removeChild(d_monster)
-                            delete this.objects.monsters[monsters[k].guid]
+                            this.remove_sprite(k, this.objects.monsters)
+                            this.remove_sprite(i, this.objects.bullets)
 
-                            bullet_to_be_removed.push(i);
                             this.status.score += 10;
                         }
                     }
                 }
-
-                for (var j = bullet_to_be_removed.length - 1; j >= 0; j--) {
-                    this.remove_sprite(j, this.objects.bullets);
-                }
-
             }
 
             this.bang_routine = function () {
@@ -368,7 +329,7 @@
                 this.status.loop_indicator = this.status.loop_indicator > 10 ? 0 : ++this.status.loop_indicator
 
                 if (!this.status.started) {
-                    this.status.loop_indicator++;
+             
                     if (this.status.loop_indicator % 1 == 0) {
                         this.objects.btn_play.scale.x = Math.sin(this.status.loop_indicator / 8) / 16 + 0.85
                         this.objects.btn_play.scale.y = Math.sin(this.status.loop_indicator / 8) / 16 + 0.85
@@ -383,13 +344,12 @@
                         this.status.ready_to_stop = true
                         this.stop_setup()
                     }
-      
+
                     return
                 }
 
                 this.ship_routine()
                 this.monsters_routine()
-                this.clean_up_monsters()
                 this.bullet_routine()
                 this.bang_routine()
 
@@ -411,7 +371,7 @@
             }
 
             this.restart_game = function () {
-                this.remove_all_monsters();
+                this.cleanup_sprites(this.objects.monsters);
                 this.cleanup_sprites(this.objects.bullets);
                 this.cleanup_sprites(this.objects.bangs);
 
@@ -553,7 +513,7 @@
 
             this.objects = {}
             this.objects.ship = null
-            this.objects.monsters = {}
+            this.objects.monsters = []
             this.objects.bullets = []
             this.objects.bangs = []
             this.objects.bg = null
