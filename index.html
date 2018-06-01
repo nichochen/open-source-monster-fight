@@ -56,10 +56,9 @@
 
 
             this.setup_background = function () {
-                let texture = PIXI.Texture.fromImage('./images/bg-space.jpg');
-                this.objects.bg = new PIXI.Sprite(texture);
+                this.objects.bg = new PIXI.Sprite(PIXI.loader.resources["bg"].texture);
                 let bg = this.objects.bg
-                bg.interactive = true
+                bg.interactive = false
 
                 let objects = this.objects
 
@@ -76,7 +75,7 @@
             }
 
             this.setup_logo = function () {
-                this.objects.logo = PIXI.Sprite.fromImage('./images/logo.png');
+                this.objects.logo = new PIXI.Sprite(PIXI.loader.resources["logo"].texture);
 
                 let logo = this.objects.logo
                 logo.x = this.app.renderer.view.width / 2 - 450;
@@ -87,7 +86,7 @@
 
             this.setup_btn_play = function () {
                 //play button
-                this.objects.btn_play = PIXI.Sprite.fromImage('./images/play.png');
+                this.objects.btn_play = new PIXI.Sprite(PIXI.loader.resources["play"].texture);
                 var play = this.objects.btn_play
 
                 play.x = this.app.renderer.view.width / 2 - 150;
@@ -118,7 +117,7 @@
             }
 
             this.setup_ship = function () {
-                this.objects.ship = PIXI.Sprite.fromImage('./images/ship-x.png');
+                this.objects.ship = new PIXI.Sprite(PIXI.loader.resources["ship"].texture);
 
                 let ship = this.objects.ship
 
@@ -158,8 +157,7 @@
                     //create bullets
                     if (Math.abs(target_x - center_x) <= 1 && !ship.fired && this.objects.bullets.length < this.settings.max_bullet) {
 
-                        let image_name = './images/bullet' + randint(1, 6) + '.png'
-                        let b = PIXI.Sprite.fromImage(image_name)
+                        let b = new PIXI.Sprite(PIXI.loader.resources["bullet" + randint(1, 6)].texture)
                         b.x = target_x
                         b.y = ship.y + ship.height - 50
                         b.vy = 0;
@@ -173,8 +171,7 @@
             }
 
             this.generate_monster = function () {
-                let image_name = './images/monster' + randint(1, 6) + '.png'
-                let m = PIXI.Sprite.fromImage(image_name)
+                let m = new PIXI.Sprite(PIXI.loader.resources["monster" + randint(1, 6)].texture)
 
 
                 let x = (Math.random() < ((this.objects.ship.x + 300 / 2) / (this.app.renderer.view.width - 300 / 2)) ? -randint(200, 250) : this.app.renderer.view.width + randint(0, 250))
@@ -300,8 +297,7 @@
                     let monsters = this.objects.monsters
                     for (var k = monsters.length - 1; k >= 0; k--) {
                         if (this.box_intersect(b, monsters[k])) {
-                            let image_name = './images/bang' + (Math.random() > 0.5 ? 1 : 2) + '.png';
-                            let ba = PIXI.Sprite.fromImage(image_name);
+                            let ba = new PIXI.Sprite(PIXI.loader.resources["bang" + (Math.random() > 0.5 ? 1 : 2)].texture)
                             ba.x = monsters[k].x;
                             ba.y = monsters[k].y;
                             ba.count = 0;
@@ -328,8 +324,13 @@
             this.game_loop = function (delta) {
                 this.status.loop_indicator = this.status.loop_indicator > 10 ? 0 : ++this.status.loop_indicator
 
+                if (!this.status.resource_loaded) {
+                    this.settings.info_style.fill = this.status.loop_indicator > 5 == 0 ? '#ff597f' : '#fff963'
+                    return
+                }
+
                 if (!this.status.started) {
-             
+
                     if (this.status.loop_indicator % 1 == 0) {
                         this.objects.btn_play.scale.x = Math.sin(this.status.loop_indicator / 8) / 16 + 0.85
                         this.objects.btn_play.scale.y = Math.sin(this.status.loop_indicator / 8) / 16 + 0.85
@@ -423,7 +424,7 @@
                     this.objects.endding_board2 = new PIXI.Text('Keep up the good work!', this.settings.info_style);
                 }
 
-                this.objects.ending_logo = PIXI.Sprite.fromImage('./images/logo.png');
+                this.objects.ending_logo = new PIXI.Sprite(PIXI.loader.resources["logo"].texture);
                 this.objects.ending_logo.x = this.app.renderer.view.width / 2 - 450;
                 this.objects.ending_logo.y = 200;
                 this.app.stage.addChild(this.objects.ending_logo);
@@ -435,11 +436,9 @@
                 this.objects.endding_board1.position.set(this.app.renderer.view.width / 2 - this.objects.endding_board1.width / 2, 600);
                 this.objects.endding_board2.position.set(this.app.renderer.view.width / 2 - this.objects.endding_board2.width / 2, this.objects.endding_board1.y + + this.objects.endding_board3.height + 10);
                 this.objects.endding_board3.position.set(this.app.renderer.view.width / 2 - this.objects.endding_board3.width / 2, this.objects.endding_board2.y + + this.objects.endding_board3.height + 10);
-                this.objects.score_text.position.set(this.app.renderer.view.width / 2 - this.objects.score_text.width / 2, this.objects.endding_board3.y + this.objects.endding_board3.height + 10);
+                this.objects.score_text.position.set(this.app.renderer.view.width / 2 - this.objects.score_text.width / 2, this.objects.endding_board3.y + this.objects.endding_board3.height + 10)
 
-                // this.objects.image_name = './images/monster' + randint(1, 6) + '.png';
-
-                this.objects.restart = PIXI.Sprite.fromImage('images/restart.png');
+                this.objects.restart = new PIXI.Sprite(PIXI.loader.resources["restart"].texture);
                 this.app.stage.addChild(this.objects.restart);
                 this.objects.restart.x = this.app.renderer.view.width / 2 - 280;
                 this.objects.restart.y = this.objects.score_text.y + this.objects.score_text.height + 50;
@@ -464,6 +463,42 @@
                 });
 
             }
+        }
+        Game.prototype.load_resources = function () {
+            const loader = PIXI.loader
+            loader.add('logo', './images/logo.png')
+            loader.add('play', './images/play.png')
+            loader.add('ship', './images/ship-x.png')
+            loader.add('restart', './images/restart.png')
+            loader.add('bang1', './images/bang1.png')
+            loader.add('bang2', './images/bang2.png')
+            loader.add('bg', './images/bg-space.jpg')
+
+            for (var i = 1; i < 6; i++) {
+                loader.add('bullet' + i, './images/bullet' + i + '.png')
+                loader.add('monster' + i, './images/monster' + i + '.png')
+            }
+
+            loader.load()
+
+            loader.onComplete.add(() => {
+                this.status.resource_loaded = true
+                this.objects.loading.visible = false
+                this.setup_background()
+                this.setup_logo()
+                this.setup_btn_play()
+                this.setup_ship()
+                this.objects.bg.interactive = true
+                this.app.stage.addChild(this.objects.score_board)
+                this.app.stage.addChild(this.objects.time_board)
+                console.log('Resources loaded')
+            })
+
+            this.objects.loading = new PIXI.Text('> Loading......', this.settings.info_style);
+            this.objects.loading.position.set(this.app.renderer.view.width/2 - this.objects.loading.width/2, this.app.renderer.view.height/2);
+            this.app.stage.addChild(this.objects.loading)
+            this.app.renderer.backgroundColor = 0x061639
+
         }
 
         Game.prototype.setup = function () {
@@ -502,6 +537,7 @@
             });
 
             this.status = {}
+            this.resource_loaded = false
             this.status.start_time = null
             this.status.time_left = 0
             this.status.started = false
@@ -532,17 +568,9 @@
             this.objects.score_board.position.set(600, 50);
             this.objects.time_board.position.set(100, 50);
 
+            this.load_resources()
 
-            this.setup_background()
-            this.app.stage.addChild(this.objects.score_board);
-            this.app.stage.addChild(this.objects.time_board);
-
-
-            this.setup_logo()
-            this.setup_btn_play()
-            this.setup_ship()
-
-            this.app.ticker.add(delta => this.game_loop(delta));
+            this.app.ticker.add(delta => this.game_loop(delta))
 
         }
 
