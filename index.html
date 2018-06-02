@@ -70,6 +70,7 @@
 
                     ship.target_x = parseInt(e.data.global.x)
                     ship.target_y = parseInt(e.data.global.y)
+
                     console.log(parseInt(ship.target_y))
                     if (ship.target_y >= 600) {
                         ship.target_y = 600
@@ -81,8 +82,8 @@
 
                     console.log(ship.target_y)
 
-                    ship.vx = 5
-                    ship.vy = 5
+                    ship.vx = settings.ship_speed * settings.ship_speed_factor
+                    ship.vy = settings.ship_speed * settings.ship_speed_factor
                     ship.fired = false;
                 });
 
@@ -145,8 +146,8 @@
                 ship.direction = 1
                 ship.target_x = ship.x
                 ship.target_y = ship.y
-                ship.vx = 10
-                ship.vy = 20
+                ship.vx = this.settings.ship_speed * this.settings.ship_speed_factor
+                ship.vy = this.settings.ship_speed * this.settings.ship_speed_factor
                 ship.visible = false;
                 ship.fired = true;
                 this.app.stage.addChild(ship);
@@ -168,21 +169,22 @@
                         ship.x -= ship.vx;
                     }
 
-                    if (Math.abs(target_x - center_x) < 10) {
+                    if (Math.abs(target_x - center_x) < this.settings.ship_speed * this.settings.ship_speed_factor) {
                         ship.x = ship.target_x - ship.width / 2
                     }
 
-                    if (Math.abs(ship.target_y - ship.y) < 10) {
-                        ship.y = ship.target_y
+                    if (ship.target_y > 0) {
+                        if (Math.abs(ship.target_y - ship.y) < this.settings.ship_speed * this.settings.ship_speed_factor) {
+                            ship.y = ship.target_y
+                        }
+
+                        if (ship.target_y < ship.y) {
+                            ship.y -= ship.vy
+                        } else if (ship.target_y > ship.y) {
+                            ship.y += ship.vy
+                        }
+
                     }
-
-                    if (ship.target_y < ship.y) {
-                        ship.y -= ship.vy
-                    } else if (ship.target_y > ship.y) {
-                        ship.y += ship.vy
-                    }
-
-
 
                     //create bullets
                     if (Math.abs(target_x - center_x) <= 1 && !ship.fired && this.objects.bullets.length < this.settings.max_bullet) {
@@ -190,7 +192,7 @@
                         let b = new PIXI.Sprite(PIXI.loader.resources[btxt].texture)
                         b.x = target_x
                         b.y = ship.y + ship.height - 50
-                        b.vy = 0;
+                        b.vy = 0 + this.settings.ship_speed * this.settings.ship_speed_factor;
                         this.app.stage.addChild(b)
                         this.objects.bullets.push(b)
 
@@ -198,12 +200,14 @@
                     }
                 }
 
-                ship.y = ship.y + Math.sin((new Date()).getMilliseconds() / 150) * 10;
+                if (ship.target_y == -1 || ship.target_y == ship.y) {
+                    ship.y = ship.y + Math.sin((new Date()).getMilliseconds() / 150) * 4
+                    ship.target_y = -1
+                }
             }
 
             this.generate_monster = function () {
                 let txt = "monster" + randint(1, 6)
-                console.log(txt)
                 let m = new PIXI.Sprite(PIXI.loader.resources[txt].texture)
 
 
@@ -228,7 +232,6 @@
 
                     ship.target_x = parseInt(e.data.global.x)
                     ship.target_y = parseInt(e.data.global.y)
-                    console.log(parseInt(ship.target_y))
                     if (ship.target_y >= 600) {
                         ship.target_y = 600
                     }
@@ -239,8 +242,6 @@
 
                     console.log(ship.target_y)
 
-                    ship.vx = 5
-                    ship.vy = 5
                     ship.fired = false;
                 });
 
@@ -572,6 +573,8 @@
             this.settings.max_bullet = 2
             this.settings.monsters_baseline = this.app.renderer.view.height - 100
             this.settings.time_limit = 30
+            this.settings.ship_speed = 4
+            this.settings.ship_speed_factor = 1
 
             this.settings.info_style = new PIXI.TextStyle({
                 fontFamily: "My Font",
