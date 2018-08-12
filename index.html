@@ -173,7 +173,7 @@
                         ship.x = ship.target_x - ship.width / 2
                     }
 
-                    if (ship.target_y > 0) {
+                    /*if (ship.target_y > 0) {
                         if (Math.abs(ship.target_y - ship.y) < this.settings.ship_speed * this.settings.ship_speed_factor) {
                             ship.y = ship.target_y
                         }
@@ -184,7 +184,7 @@
                             ship.y += ship.vy
                         }
 
-                    }
+                    }*/
 
                     //create bullets
                     if (Math.abs(target_x - center_x) <= 1 && !ship.fired && this.objects.bullets.length < this.settings.max_bullet) {
@@ -200,10 +200,12 @@
                     }
                 }
 
-                if (ship.target_y == -1 || ship.target_y == ship.y) {
+                /*if (ship.target_y == -1 || ship.target_y == ship.y) {
                     ship.y = ship.y + Math.sin((new Date()).getMilliseconds() / 150) * 4
                     ship.target_y = -1
-                }
+                }*/
+				ship.y = ship.y + Math.sin((new Date()).getMilliseconds() / 150) * 4
+				
             }
 
             this.generate_monster = function () {
